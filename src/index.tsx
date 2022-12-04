@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, KeyboardEvent } from 'react'
+import React, { useRef, useEffect, KeyboardEvent, useState } from 'react'
 import ReactDOM from 'react-dom'
 
 type Obstacle = {
@@ -17,6 +17,8 @@ type Point = {
 const DinoGame = () => {
   const canvasRef = useRef(null)
   const jumpRef = useRef(false)
+  const [isEnd, setIsEnd] = useState(false)
+  const [restart, setRestart] = useState(false)
 
   const handleClick = () => {
     jumpRef.current = true
@@ -24,7 +26,11 @@ const DinoGame = () => {
 
   const handleKeyPress = (event: KeyboardEvent) => {
     if (event.key === ' ' || event.key === 'ArrowUp' || event.key === 'w') {
-      jumpRef.current = true
+      if (isEnd) {
+        doRestart()
+      } else {
+        jumpRef.current = true
+      }
     }
   }
 
@@ -42,6 +48,7 @@ const DinoGame = () => {
     let lastJumpPress = -1000
     let currentObstacles: Obstacle[] = []
     let tickCount = 0
+    let gameHasEnded = false
 
     class HitBox {
       width: number
@@ -101,8 +108,10 @@ const DinoGame = () => {
           y: obstacleY,
         })
         if (hitBox.isCollisionWith(playerHitBox)) {
-          ctx.fillStyle = 'red'
-          ctx.fillRect(obstacle.x, obstacleY, obstacle.width, obstacle.height)
+          if (!gameHasEnded) {
+            setIsEnd(true)
+            gameHasEnded = true
+          }
         }
         ctx.drawImage(obstacle.image, obstacle.x, obstacleY, obstacle.width, obstacle.height)
       })
@@ -112,7 +121,18 @@ const DinoGame = () => {
       const digits = 5
       const scoreText = score.toFixed(0)
       const zeroes = '0'.repeat(digits - scoreText.length)
-      ctx.fillText(`${zeroes}${scoreText}`, ctx.canvas.width - 90, 30)
+      const scoreTextWithZeroes = zeroes + scoreText
+      ctx.fillText(scoreTextWithZeroes, ctx.canvas.width - 90, 30)
+
+      if (gameHasEnded) {
+        const gameOverText = 'GAME OVER'
+        ctx.font = '40px Common Pixel'
+        ctx.fillText(
+          gameOverText,
+          ctx.canvas.width / 2 - ctx.measureText(gameOverText).width / 2,
+          100
+        )
+      }
     }
 
     const createObstacle = (): Obstacle => {
@@ -123,7 +143,7 @@ const DinoGame = () => {
       const scaledWidth = image.width * multiplier
       const scaledHeight = image.height * multiplier
       return {
-        x: canvas.width + Math.random() * 200 + 120,
+        x: canvas.width + Math.random() * 100 + 200,
         y: scaledHeight + Math.random() * 20,
         width: scaledWidth,
         height: scaledHeight,
@@ -133,37 +153,39 @@ const DinoGame = () => {
 
     const render = () => {
       if (context) {
-        tickCount += 1
         draw(context)
       }
-      if (jumpRef.current) {
-        lastJumpPress = frameCount
-        jumpRef.current = false
-      }
-      const shortTimeSinceLastTimeJumped = frameCount - lastJumpPress < 20
-      const shouldJump = shortTimeSinceLastTimeJumped && playerY === 0
-      if (shouldJump) {
-        playerYVelocity = 5
-      }
-      if (playerYVelocity > -10) {
-        playerYVelocity -= 0.07
-      }
-      playerY += playerYVelocity
-      if (playerY <= 0) {
-        playerY = 0
-        playerYVelocity = 0
-      }
-      const obstacleMoveSpeed = 2.5
-      currentObstacles = currentObstacles
-        .map((obstacle) => {
-          return { ...obstacle, x: obstacle.x - obstacleMoveSpeed }
-        })
-        .filter((obstacle) => obstacle.x > -1000)
-      if (
-        currentObstacles.length === 0 ||
-        currentObstacles[currentObstacles.length - 1].x < canvas.width - 200
-      ) {
-        currentObstacles = [...currentObstacles, createObstacle()]
+      if (!gameHasEnded) {
+        tickCount += 1
+        if (jumpRef.current) {
+          lastJumpPress = frameCount
+          jumpRef.current = false
+        }
+        const shortTimeSinceLastTimeJumped = frameCount - lastJumpPress < 20
+        const shouldJump = shortTimeSinceLastTimeJumped && playerY === 0
+        if (shouldJump) {
+          playerYVelocity = 5
+        }
+        if (playerYVelocity > -10) {
+          playerYVelocity -= 0.07
+        }
+        playerY += playerYVelocity
+        if (playerY <= 0) {
+          playerY = 0
+          playerYVelocity = 0
+        }
+        const obstacleMoveSpeed = 2.5
+        currentObstacles = currentObstacles
+          .map((obstacle) => {
+            return { ...obstacle, x: obstacle.x - obstacleMoveSpeed }
+          })
+          .filter((obstacle) => obstacle.x > -1000)
+        if (
+          currentObstacles.length === 0 ||
+          currentObstacles[currentObstacles.length - 1].x < canvas.width - 200
+        ) {
+          currentObstacles = [...currentObstacles, createObstacle()]
+        }
       }
       frameCount += 1
       animationFrameId = window.requestAnimationFrame(render)
@@ -173,7 +195,12 @@ const DinoGame = () => {
     return () => {
       window.cancelAnimationFrame(animationFrameId)
     }
-  }, [])
+  }, [restart])
+
+  const doRestart = () => {
+    setIsEnd(false)
+    setRestart(!restart)
+  }
 
   return (
     // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
@@ -182,9 +209,27 @@ const DinoGame = () => {
         onClick={handleClick}
         onKeyDown={handleKeyPress}
         tabIndex={0}
-        style={{ width: 750, height: 300, border: 'solid' }}
+        style={{ width: 750, height: 300, border: 'solid', position: 'relative' }}
       >
         <canvas ref={canvasRef} height="300" width="750" />
+        {isEnd && (
+          <button
+            style={{
+              position: 'absolute',
+              width: 50,
+              height: 50,
+              left: 350,
+              top: 125,
+              border: 'none',
+              background: 'none',
+              zIndex: 1000,
+              cursor: 'pointer',
+            }}
+            onClick={() => doRestart()}
+          >
+            <img src="Restart.svg" alt="Restart" />
+          </button>
+        )}
       </div>
     </div>
   )
