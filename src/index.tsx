@@ -32,9 +32,8 @@ const DinoGame = () => {
     const canvas = canvasRef.current as unknown as HTMLCanvasElement // sus
     const context: CanvasRenderingContext2D | null = canvas.getContext('2d')
     const obstacleTypes = [
-      { targetHeight: 30, image: 'error.svg' },
-      { targetHeight: 100, image: 'TiK.svg' },
-      //{ targetHeight: 40, image: 'error.svg' },
+      { targetHeight: 120, image: 'Error.svg' },
+      { targetHeight: 80, image: 'Taxi.svg' },
     ]
     let animationFrameId: number
     let frameCount = 0
@@ -74,7 +73,7 @@ const DinoGame = () => {
       }
     }
 
-    const playerHeight = 80
+    const playerHeight = 120
 
     const draw = (ctx: CanvasRenderingContext2D) => {
       ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
@@ -83,7 +82,10 @@ const DinoGame = () => {
       ctx.fillStyle = 'black'
       const playerStartY = ctx.canvas.height - playerHeight - playerY
       const image = new Image()
-      image.src = 'miukuMauku.svg'
+      const animationSlowMult = 3
+      const picIndex = Math.floor((tickCount % (40 * animationSlowMult)) / (10 * animationSlowMult))
+      image.src =
+        playerY === 0 ? ['Stand.svg', 'Walk1.svg', 'Stand.svg', 'Walk2.svg'][picIndex] : 'Stand.svg'
       const multiplier = playerHeight / image.height
       const scaledWidth = image.width * multiplier
       const scaledHeight = image.height * multiplier
@@ -110,7 +112,7 @@ const DinoGame = () => {
       const digits = 5
       const scoreText = score.toFixed(0)
       const zeroes = '0'.repeat(digits - scoreText.length)
-      ctx.fillText(`${zeroes}${scoreText}`, ctx.canvas.width - 100, 100)
+      ctx.fillText(`${zeroes}${scoreText}`, ctx.canvas.width - 90, 30)
     }
 
     const createObstacle = (): Obstacle => {
@@ -121,7 +123,7 @@ const DinoGame = () => {
       const scaledWidth = image.width * multiplier
       const scaledHeight = image.height * multiplier
       return {
-        x: canvas.width + Math.random() * 200 + 100,
+        x: canvas.width + Math.random() * 200 + 120,
         y: scaledHeight + Math.random() * 20,
         width: scaledWidth,
         height: scaledHeight,
@@ -144,16 +146,17 @@ const DinoGame = () => {
         playerYVelocity = 5
       }
       if (playerYVelocity > -10) {
-        playerYVelocity -= 0.065
+        playerYVelocity -= 0.07
       }
       playerY += playerYVelocity
       if (playerY <= 0) {
         playerY = 0
         playerYVelocity = 0
       }
+      const obstacleMoveSpeed = 2.5
       currentObstacles = currentObstacles
         .map((obstacle) => {
-          return { ...obstacle, x: obstacle.x - 2 }
+          return { ...obstacle, x: obstacle.x - obstacleMoveSpeed }
         })
         .filter((obstacle) => obstacle.x > -1000)
       if (
@@ -174,8 +177,15 @@ const DinoGame = () => {
 
   return (
     // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
-    <div onClick={handleClick} onKeyDown={handleKeyPress} tabIndex={0}>
-      <canvas ref={canvasRef} height="350" width="750" />
+    <div style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+      <div
+        onClick={handleClick}
+        onKeyDown={handleKeyPress}
+        tabIndex={0}
+        style={{ width: 750, height: 300, border: 'solid' }}
+      >
+        <canvas ref={canvasRef} height="300" width="750" />
+      </div>
     </div>
   )
 }
