@@ -18,9 +18,13 @@ const DinoGame = () => {
   const canvasRef = useRef(null)
   const jumpRef = useRef(false)
   const [isEnd, setIsEnd] = useState(false)
+  const [isStarted, setIsStarted] = useState(false)
   const [restart, setRestart] = useState(false)
 
   const handleClick = () => {
+    if (!isStarted) {
+      setIsStarted(true)
+    }
     jumpRef.current = true
   }
 
@@ -31,6 +35,9 @@ const DinoGame = () => {
       } else {
         jumpRef.current = true
       }
+      if (!isStarted) {
+        setIsStarted(true)
+      }
     }
   }
 
@@ -38,15 +45,30 @@ const DinoGame = () => {
     const canvas = canvasRef.current as unknown as HTMLCanvasElement // sus
     const context: CanvasRenderingContext2D | null = canvas.getContext('2d')
     const obstacleTypes = [
-      { targetHeight: 120, image: 'Error.svg' },
-      { targetHeight: 80, image: 'Taxi.svg' },
+      { targetHeight: 130, image: 'Error.svg' },
+      { targetHeight: 75, image: 'Taxi.svg' },
+      { targetHeight: 120, image: 'Manga.svg' },
     ]
     let animationFrameId: number
     let frameCount = 0
     let playerY = 0
     let playerYVelocity = 0
     let lastJumpPress = -1000
+    const playerHeight = 120
+    const groundHeight = 30
     let currentObstacles: Obstacle[] = []
+    let groundSpecs: Point[] = []
+    const createSpec = (x?: number): Point => {
+      return {
+        x: x || canvas.width,
+        y: Math.random() * (groundHeight - 15 + 10),
+      }
+    }
+    for (let i = 0; i <= canvas.width; i++) {
+      if (i % 4 === 0) {
+        groundSpecs.push(createSpec(i))
+      }
+    }
     let tickCount = 0
     let gameHasEnded = false
 
@@ -80,13 +102,15 @@ const DinoGame = () => {
       }
     }
 
-    const playerHeight = 120
-
     const draw = (ctx: CanvasRenderingContext2D) => {
       ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
       ctx.fillStyle = 'white'
       ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.width)
       ctx.fillStyle = 'black'
+      ctx.fillRect(0, ctx.canvas.height - groundHeight, ctx.canvas.width, 2)
+      groundSpecs.forEach((spec) => {
+        ctx.fillRect(spec.x, canvas.height - spec.y, 1, 1)
+      })
       const playerStartY = ctx.canvas.height - playerHeight - playerY
       const image = new Image()
       const animationSlowMult = 3
@@ -143,8 +167,8 @@ const DinoGame = () => {
       const scaledWidth = image.width * multiplier
       const scaledHeight = image.height * multiplier
       return {
-        x: canvas.width + Math.random() * 100 + 200,
-        y: scaledHeight + Math.random() * 20,
+        x: canvas.width + Math.random() * 100 + 250,
+        y: scaledHeight + Math.random() * (groundHeight - 15 + 10),
         width: scaledWidth,
         height: scaledHeight,
         image,
@@ -155,7 +179,7 @@ const DinoGame = () => {
       if (context) {
         draw(context)
       }
-      if (!gameHasEnded) {
+      if (!gameHasEnded && isStarted) {
         tickCount += 1
         if (jumpRef.current) {
           lastJumpPress = frameCount
@@ -186,6 +210,12 @@ const DinoGame = () => {
         ) {
           currentObstacles = [...currentObstacles, createObstacle()]
         }
+        groundSpecs = groundSpecs
+          .map((spec) => {
+            return { ...spec, x: spec.x - obstacleMoveSpeed }
+          })
+          .filter((spec) => spec.x > -1000)
+        groundSpecs = [...groundSpecs, createSpec()]
       }
       frameCount += 1
       animationFrameId = window.requestAnimationFrame(render)
@@ -195,7 +225,7 @@ const DinoGame = () => {
     return () => {
       window.cancelAnimationFrame(animationFrameId)
     }
-  }, [restart])
+  }, [restart, isStarted])
 
   const doRestart = () => {
     setIsEnd(false)
