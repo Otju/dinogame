@@ -120,7 +120,11 @@ const DinoGame = () => {
       const multiplier = playerHeight / image.height
       const scaledWidth = image.width * multiplier
       const scaledHeight = image.height * multiplier
-      ctx.drawImage(image, 50, playerStartY, scaledWidth, scaledHeight)
+      let playerX = 50
+      if (playerY !== 0 || picIndex === 0 || picIndex === 2) {
+        playerX += scaledWidth / 4
+      }
+      ctx.drawImage(image, playerX, playerStartY, scaledWidth, scaledHeight)
       const playerHitBox = new HitBox(scaledWidth, scaledHeight, {
         x: 50,
         y: playerStartY,
@@ -133,8 +137,8 @@ const DinoGame = () => {
         })
         if (hitBox.isCollisionWith(playerHitBox)) {
           if (!gameHasEnded) {
-            setIsEnd(true)
-            gameHasEnded = true
+            //setIsEnd(true)
+            //gameHasEnded = true
           }
         }
         ctx.drawImage(obstacle.image, obstacle.x, obstacleY, obstacle.width, obstacle.height)
